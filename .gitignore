@@ -1,0 +1,10 @@
+node_modules
+dist    
+.env
+.DS_Store
+.vscode
+.idea
+coverage
+package-lock.json
+package.json
+typescript.json
