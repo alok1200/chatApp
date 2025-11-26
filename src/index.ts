@@ -10,17 +10,45 @@ interface User {
 let allSockets: User[] = [];
 
 wss.on("connection", (socket) => {
-  socket.on("message", (message) => {
-    const parsedMessage = JSON.parse(message);
-    if (parsedMessage.type == "join") {
+  console.log("Client connected");
+
+  socket.on("message", (raw) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+
+    // JOIN ROOM
+    if (parsed.type === "join") {
       allSockets.push({
         socket,
-        room: parsedMessage.payload.room,
+        room: parsed.payload.roomId,
+      });
+      return;
+    }
+
+    // SEND CHAT MESSAGE TO SAME ROOM
+    if (parsed.type === "chat") {
+      const userRoom = allSockets.find((u) => u.socket === socket)?.room;
+      if (!userRoom) return;
+
+      const msg = JSON.stringify({
+        type: "chat",
+        payload: parsed.payload,
+      });
+
+      // broadcast only to users in same room
+      allSockets.forEach((user) => {
+        if (user.room === userRoom) {
+          user.socket.send(msg);
+        }
       });
     }
   });
 
-  socket.on("disconnect", () => {
-    allSockets = allSockets.filter((user) => user.socket !== socket);
+  socket.on("close", () => {
+    allSockets = allSockets.filter((u) => u.socket !== socket);
   });
 });
